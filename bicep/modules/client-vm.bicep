@@ -1,5 +1,5 @@
 // Client VM module for Windows Server 2025 Learning Lab
-// Deploys a Windows 11 client VM to join the domain
+// Deploys a Windows 11 client VM joined to the domain
 
 param location string
 param tags object
@@ -15,21 +15,23 @@ param domainName string
 param subnetId string
 param dcIpAddress string
 param keyVaultName string
+param vmName string = 'cli1' // Parameter for client VM name
 
 // VM configuration
-var clientVmName = '${prefix}-client'
+var resourceName = '${prefix}-${vmName}' // Resource name (can be longer)
+var computerName = vmName // Computer name must be 15 chars or less
 var vmSize = 'Standard_D2s_v3' // 2 vCPUs, 8 GB RAM
 var osDiskSizeGB = 128
 var imageReference = {
   publisher: 'MicrosoftWindowsDesktop'
-  offer: 'Windows-11'
-  sku: 'win11-23h2-ent'
+  offer: 'windows-11'
+  sku: 'win11-22h2-pro'
   version: 'latest'
 }
 
 // NIC configuration
 resource clientVmNic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
-  name: '${clientVmName}-nic'
+  name: '${resourceName}-nic'
   location: location
   tags: tags
   properties: {
@@ -37,8 +39,7 @@ resource clientVmNic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
       {
         name: 'ipconfig1'
         properties: {
-          privateIPAllocationMethod: 'Static'
-          privateIPAddress: '10.0.2.4'
+          privateIPAllocationMethod: 'Dynamic'
           subnet: {
             id: subnetId
           }
@@ -47,17 +48,12 @@ resource clientVmNic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
     ]
     enableIPForwarding: false
     enableAcceleratedNetworking: true
-    dnsSettings: {
-      dnsServers: [
-        dcIpAddress
-      ]
-    }
   }
 }
 
 // Client VM
 resource clientVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
-  name: clientVmName
+  name: resourceName
   location: location
   tags: tags
   properties: {
@@ -75,7 +71,7 @@ resource clientVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
       imageReference: imageReference
     }
     osProfile: {
-      computerName: clientVmName
+      computerName: computerName
       adminUsername: adminUsername
       adminPassword: adminPassword
       windowsConfiguration: {
@@ -103,7 +99,7 @@ resource clientVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
 }
 
 // Domain join and install tools
-resource clientVmConfig 'Microsoft.Compute/virtualMachines/extensions@2023-07-01' = {
+resource clientVmConfig 'Microsoft.Compute/virtualMachines/extensions@2022-08-01' = {
   parent: clientVm
   name: 'JoinDomainAndConfig'
   location: location
@@ -114,16 +110,14 @@ resource clientVmConfig 'Microsoft.Compute/virtualMachines/extensions@2023-07-01
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
     settings: {
-      fileUris: [
-        'https://raw.githubusercontent.com/${prefix}/server-2025-learning-lab/main/scripts/setup-client.ps1'
-      ]
+      fileUris: []
     }
     protectedSettings: {
-      commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -File setup-client.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword}'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "New-Item -Path C:\\Scripts -ItemType Directory -Force; Add-Content -Path C:\\Scripts\\setup-client.ps1 -Value \\"param ($DomainName, $AdminUser, $AdminPassword) Start-Transcript -Path C:\\Logs\\client-setup.log -Append; Write-Output \\"Starting client configuration...\\"; Start-Sleep -Seconds 60; $securePassword = ConvertTo-SecureString $AdminPassword -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential(\\\\"$DomainName\\\\$AdminUser\\\\", $securePassword); Add-Computer -DomainName $DomainName -Credential $credential -Restart:$false -Force; Write-Output \\"Configuration complete! Restart required.\\"; Stop-Transcript; Restart-Computer -Force\\"; C:\\Scripts\\setup-client.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword}"'
     }
   }
 }
 
 // Outputs
-output clientVmName string = clientVm.name
+output clientVmName string = resourceName
 output clientVmPrivateIp string = clientVmNic.properties.ipConfigurations[0].properties.privateIPAddress 

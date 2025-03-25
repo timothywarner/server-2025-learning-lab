@@ -1,11 +1,8 @@
 // Member Server module for Windows Server 2025 Learning Lab
-// Deploys a member server with dev tools pre-installed
+// Deploys a member server with dev tools and admin center
 
 param location string
-param tags object = {
-  workload: 'ws2025-lab'
-  environment: 'lab'
-}
+param tags object
 param prefix string
 
 @secure()
@@ -18,21 +15,24 @@ param domainName string
 param subnetId string
 param dcIpAddress string
 param keyVaultName string
+param vmName string = 'mem1' // Parameter for member server name
+param logAnalyticsWorkspaceId string = '' // Parameter for Log Analytics workspace ID
 
-// VM configuration with dev tools requirements
-var memberServerName = '${prefix}-mem01' // CAF naming: add number suffix
-var vmSize = 'Standard_D4s_v3' // 4 vCPUs, 16 GB RAM for dev tools
-var osDiskSizeGB = 256 // Increased for dev tools
+// VM configuration
+var resourceName = '${prefix}-${vmName}' // Resource name (can be longer)
+var computerName = vmName // Computer name must be 15 chars or less
+var vmSize = 'Standard_D2s_v3' // 2 vCPUs, 8 GB RAM
+var osDiskSizeGB = 128
 var imageReference = {
   publisher: 'MicrosoftWindowsServer'
   offer: 'WindowsServer'
-  sku: '2025-datacenter-azure-edition'  // Remove smalldisk for dev tools
+  sku: '2025-datacenter-azure-edition-smalldisk'
   version: 'latest'
 }
 
 // NIC configuration
 resource memberServerNic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
-  name: '${memberServerName}-nic01' // CAF naming
+  name: '${resourceName}-nic'
   location: location
   tags: tags
   properties: {
@@ -40,8 +40,7 @@ resource memberServerNic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
       {
         name: 'ipconfig1'
         properties: {
-          privateIPAllocationMethod: 'Static'
-          privateIPAddress: '10.0.1.4'
+          privateIPAllocationMethod: 'Dynamic'
           subnet: {
             id: subnetId
           }
@@ -50,17 +49,12 @@ resource memberServerNic 'Microsoft.Network/networkInterfaces@2023-05-01' = {
     ]
     enableIPForwarding: false
     enableAcceleratedNetworking: true
-    dnsSettings: {
-      dnsServers: [
-        dcIpAddress
-      ]
-    }
   }
 }
 
 // Member Server VM
 resource memberServerVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
-  name: memberServerName
+  name: resourceName
   location: location
   tags: tags
   properties: {
@@ -78,7 +72,7 @@ resource memberServerVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
       imageReference: imageReference
     }
     osProfile: {
-      computerName: memberServerName
+      computerName: computerName
       adminUsername: adminUsername
       adminPassword: adminPassword
       windowsConfiguration: {
@@ -88,7 +82,6 @@ resource memberServerVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
           patchMode: 'AutomaticByOS'
           assessmentMode: 'ImageDefault'
         }
-        timeZone: 'UTC'  // Consistent timezone
       }
     }
     networkProfile: {
@@ -106,29 +99,46 @@ resource memberServerVm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
   }
 }
 
+// Log Analytics agent for Member Server
+resource memberServerLogAnalytics 'Microsoft.Compute/virtualMachines/extensions@2023-07-01' = if (!empty(logAnalyticsWorkspaceId)) {
+  parent: memberServerVm
+  name: 'MicrosoftMonitoringAgent'
+  location: location
+  properties: {
+    publisher: 'Microsoft.EnterpriseCloud.Monitoring'
+    type: 'MicrosoftMonitoringAgent'
+    typeHandlerVersion: '1.0'
+    autoUpgradeMinorVersion: true
+    settings: {
+      workspaceId: !empty(logAnalyticsWorkspaceId) ? reference(logAnalyticsWorkspaceId, '2022-10-01').customerId : ''
+    }
+    protectedSettings: {
+      workspaceKey: !empty(logAnalyticsWorkspaceId) ? listKeys(logAnalyticsWorkspaceId, '2022-10-01').primarySharedKey : ''
+    }
+  }
+}
+
 // Domain join and install dev tools
-resource memberServerConfig 'Microsoft.Compute/virtualMachines/extensions@2023-07-01' = {
+resource memberServerConfig 'Microsoft.Compute/virtualMachines/extensions@2022-08-01' = {
   parent: memberServerVm
   name: 'JoinDomainAndConfig'
   location: location
   tags: tags
+  dependsOn: !empty(logAnalyticsWorkspaceId) ? [memberServerLogAnalytics] : []
   properties: {
     publisher: 'Microsoft.Compute'
     type: 'CustomScriptExtension'
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
     settings: {
-      fileUris: [
-        'https://raw.githubusercontent.com/${prefix}/server-2025-learning-lab/main/scripts/setup-member-server.ps1'
-      ]
+      fileUris: []
     }
     protectedSettings: {
-      commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -File setup-member-server.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword} -InstallDevTools $true'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "New-Item -Path C:\\Scripts -ItemType Directory -Force; Add-Content -Path C:\\Scripts\\setup-member-server.ps1 -Value \\"param ($DomainName, $AdminUser, $AdminPassword) Start-Transcript -Path C:\\Logs\\member-server-setup.log -Append; Write-Output \\"Starting member server configuration...\\"; Start-Sleep -Seconds 60; $securePassword = ConvertTo-SecureString $AdminPassword -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential(\\\\"$DomainName\\\\$AdminUser\\\\", $securePassword); Add-Computer -DomainName $DomainName -Credential $credential -Restart:$false -Force; Install-WindowsFeature -Name RSAT-AD-Tools, RSAT-DNS, Web-Server, Web-Mgmt-Tools; Write-Output \\"Configuration complete! Restart required.\\"; Stop-Transcript; Restart-Computer -Force\\"; C:\\Scripts\\setup-member-server.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword}"'
     }
   }
 }
 
 // Outputs
-output memberServerName string = memberServerVm.name
+output memberServerName string = resourceName
 output memberServerPrivateIp string = memberServerNic.properties.ipConfigurations[0].properties.privateIPAddress
-output memberServerResourceId string = memberServerVm.id 
