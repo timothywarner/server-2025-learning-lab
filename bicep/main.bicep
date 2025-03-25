@@ -23,7 +23,6 @@ param tags object = {
 }
 
 @description('Admin username for all VMs')
-@secure()
 param adminUsername string
 
 @description('Admin password for all VMs')

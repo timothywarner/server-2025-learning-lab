@@ -30,8 +30,17 @@ function Generate-RandomPassword {
     return $password
 }
 
-# Configuration
+# Clean up any existing resource group with the same name (BE CAREFUL WITH THIS!)
 $ResourceGroupName = "rg-ws2025-lab"
+$existingGroup = az group exists --name $ResourceGroupName
+if ($existingGroup -contains "true") {
+    Write-Host "Cleaning up existing resource group: $ResourceGroupName" -ForegroundColor Yellow
+    az group delete --name $ResourceGroupName --yes --no-wait
+    Write-Host "Waiting for resource group deletion to complete..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 120  # Wait for deletion to complete
+}
+
+# Configuration
 $DomainName = "winlab2025"
 $Location = "eastus"
 $AdminUsername = "labadmin"

@@ -5,7 +5,6 @@ param location string
 param tags object
 param prefix string
 
-@secure()
 param adminUsername string
 
 @secure()
@@ -29,7 +28,7 @@ var osDiskSizeGB = 128
 var imageReference = {
   publisher: 'MicrosoftWindowsServer'
   offer: 'WindowsServer'
-  sku: '2025-datacenter-azure-edition-smalldisk'
+  sku: '2025-datacenter-g2'
   version: 'latest'
 }
 
@@ -235,9 +234,11 @@ resource dc1ConfigTools 'Microsoft.Compute/virtualMachines/extensions@2022-08-01
   name: 'ConfigureTools'
   location: location
   tags: tags
-  dependsOn: [
+  dependsOn: deployDC2 ? [
     dc1ConfigADDS
     dc2ConfigADDS
+  ] : [
+    dc1ConfigADDS
   ]
   properties: {
     publisher: 'Microsoft.Compute'
@@ -245,17 +246,12 @@ resource dc1ConfigTools 'Microsoft.Compute/virtualMachines/extensions@2022-08-01
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
     settings: {
-      fileUris: [
-        'https://raw.githubusercontent.com/${prefix}/server-2025-learning-lab/main/scripts/configure-dc-tools.ps1'
-      ]
-    }
-    protectedSettings: {
-      commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -File configure-dc-tools.ps1 -DomainName ${domainName}'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "Install-WindowsFeature -Name RSAT-AD-Tools, RSAT-DNS-Server"'
     }
   }
 }
 
-// Install Certificate Services on DC1
+// Remove the ADCS install on DC1 since we'll do it on the member server
 resource dc1ConfigADCS 'Microsoft.Compute/virtualMachines/extensions@2022-08-01' = {
   parent: dc1Vm
   name: 'InstallADCS'
@@ -270,12 +266,7 @@ resource dc1ConfigADCS 'Microsoft.Compute/virtualMachines/extensions@2022-08-01'
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
     settings: {
-      fileUris: [
-        'https://raw.githubusercontent.com/${prefix}/server-2025-learning-lab/main/scripts/install-adcs.ps1'
-      ]
-    }
-    protectedSettings: {
-      commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -File install-adcs.ps1 -DomainName ${domainName}'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "New-Item -Path C:\\ADCS -ItemType Directory -Force"'
     }
   }
 }

@@ -5,7 +5,6 @@ param location string
 param tags object
 param prefix string
 
-@secure()
 param adminUsername string
 
 @secure()

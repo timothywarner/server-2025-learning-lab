@@ -5,7 +5,6 @@ param location string
 param tags object
 param prefix string
 
-@secure()
 param adminUsername string
 
 @secure()
@@ -26,7 +25,7 @@ var osDiskSizeGB = 128
 var imageReference = {
   publisher: 'MicrosoftWindowsServer'
   offer: 'WindowsServer'
-  sku: '2025-datacenter-azure-edition-smalldisk'
+  sku: '2025-datacenter-g2'
   version: 'latest'
 }
 
