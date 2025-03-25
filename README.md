@@ -1,159 +1,184 @@
-# Windows Server 2025 Learning Lab
+# Windows Server 2025 Learning Lab 🚀
 
-A turnkey deployment solution for creating a complete Windows Server 2025 lab environment in Azure.
+A turnkey solution for exploring Windows Server 2025 in Azure. This lab provides a complete Active Directory environment with development tools pre-installed, following Cloud Adoption Framework (CAF) best practices.
 
-![Windows Server 2025 Lab Environment](https://raw.githubusercontent.com/microsoft/Windows-Server-2025-product-repository/main/WindowsServer2025.jpg)
+## What You Get 🎁
 
-## Overview
+- 2 Domain Controllers (Primary + Secondary)
+  - Enterprise Root CA for SSL/TLS and SSH certificates
+  - Automatic certificate enrollment
+- 2 Member Servers
+  - Development tools server with Windows Admin Center
+  - Legacy app server (IIS + Classic ASP.NET)
+- 2 Client VMs for testing
+- Secure networking with Azure Bastion
+- Pre-installed development environment
+- CAF-aligned naming and security practices
 
-This project provides an automated deployment of a Windows Server 2025 lab environment in Azure, allowing you to explore and learn the newest features of Windows Server 2025. The environment is designed to be cost-effective, secure, and easy to deploy.
+### Pre-installed Developer Tools 🛠️
 
-### Lab Environment Components
-
-- **Virtual Network**: Isolated network with secured subnets
-- **Domain Controllers**: Two Windows Server 2025 Domain Controllers
-- **Member Server**: A Windows Server 2025 server joined to the domain
-- **Client VM**: A Windows 11 client VM for administration
-- **Azure Bastion**: Secure access to VMs without public IPs
-- **Key Vault**: Secure storage for credentials
-
-### Pre-installed Tools
-
-All VMs come with the following tools pre-installed:
+The member server comes loaded with:
 - PowerShell 7
-- Git and GitHub CLI
+- Git + GitHub CLI
 - Visual Studio Code
+- Node.js LTS
+- Python 3.11
+- Azure CLI + Azure Developer CLI (azd)
+- Bicep
+- Windows Terminal
 - Windows Admin Center v2
-- Node.js and Python
-- Azure CLI and Azure PowerShell
-- Bicep for infrastructure as code
+- GitHub Copilot CLI
 
-## Quick Start
+## Quick Start 🏃‍♂️
 
 ### Prerequisites
 
-- An Azure subscription (free trial works)
-- PowerShell 7+ with Az module installed
-- Azure CLI
+1. An Azure subscription ([Start with $200 free credit](https://azure.microsoft.com/free))
+2. Azure CLI installed on your machine
+3. PowerShell 7+ or Azure Cloud Shell
 
-### Deployment
+### One-Click Deploy
 
-1. Clone this repository:
-   ```powershell
-   git clone https://github.com/yourusername/server-2025-learning-lab.git
-   cd server-2025-learning-lab
-   ```
+```powershell
+# Clone this repo
+git clone https://github.com/timothywarner/server-2025-learning-lab
+cd server-2025-learning-lab
 
-2. Run the deployment script:
-   ```powershell
-   ./deploy.ps1
-   ```
-
-3. Follow the prompts to customize your deployment.
-
-### Accessing the Lab
-
-After deployment completes (approximately 30-40 minutes):
-
-1. Log in to the Azure Portal
-2. Navigate to the resource group created by the deployment
-3. Use Azure Bastion to connect to any of the VMs
-4. Credentials are stored in the Key Vault
-
-## Lab Architecture
-
-```
-+------------------------------------------+
-|                  Azure                   |
-|                                          |
-|  +-------------+       +-------------+   |
-|  | Virtual Net |       |  Key Vault  |   |
-|  +-------------+       +-------------+   |
-|         |                                |
-|  +------+------+                         |
-|  |             |                         |
-|  |  +-------+  |  +-------+  +-------+  |
-|  |  |  DC1  |  |  |  DC2  |  |  MEM  |  |
-|  |  +-------+  |  +-------+  +-------+  |
-|  |             |                         |
-|  |  +-------+  |                         |
-|  |  |CLIENT |  |                         |
-|  |  +-------+  |                         |
-|  |             |                         |
-|  +-------------+                         |
-|                                          |
-+------------------------------------------+
+# Deploy (PowerShell)
+./deploy.ps1 -DomainName "yourdomain.local" -AdminUsername "labadmin"
 ```
 
-### Network Configuration
+That's it! The script will:
+1. Create a resource group
+2. Deploy the lab environment with CAF-compliant naming
+3. Configure Active Directory
+4. Install all dev tools
+5. Provide you access information
 
-- VNet Address Space: 10.0.0.0/16
-- AD Subnet: 10.0.0.0/24
-- Server Subnet: 10.0.1.0/24
-- Client Subnet: 10.0.2.0/24
-- Bastion Subnet: 10.0.3.0/26
+### Azure Free Account Benefits 🎉
+- [$200 credit for your first 30 days](https://azure.microsoft.com/free)
+- 750 hours of Windows Server 2025 Azure Edition VM compute
+- 55+ services that are always free
+- No charges until you upgrade to pay-as-you-go
+- [Detailed free account FAQ](https://azure.microsoft.com/free/free-account-faq)
 
-### VM Details
+### Cost Management 💰
+- Using Azure Edition VMs for cost optimization
+- Implements cost-effective networking with shared Bastion
+- [Plan your costs with the Azure pricing calculator](https://azure.microsoft.com/pricing/calculator/?service=virtual-machines)
+- Remember to stop VMs when not in use!
+- Set up [Azure Cost Management](https://learn.microsoft.com/azure/cost-management-billing/costs/cost-mgt-best-practices) alerts
 
-| VM | Purpose | IP Address | Operating System |
-|----|---------|------------|------------------|
-| DC1 | Primary Domain Controller | 10.0.0.4 | Windows Server 2025 |
-| DC2 | Secondary Domain Controller | 10.0.0.5 | Windows Server 2025 |
-| MEM | Member Server (IIS, etc.) | 10.0.1.4 | Windows Server 2025 |
-| CLIENT | Admin Workstation | 10.0.2.4 | Windows 11 |
+## Lab Environment Details 🔍
 
-## Lab Features
+### Network Layout
+```
+VNet (10.0.0.0/16)
+├── AzureBastionSubnet (10.0.0.0/26)
+│   └── Azure Bastion Host
+├── AD Core Subnet (10.0.1.0/24)
+│   ├── DC1 (10.0.1.4) - FSMO + Enterprise Root CA
+│   └── DC2 (10.0.1.5) - Replica + DHCP
+├── Application Subnet (10.0.2.0/24)
+│   ├── Member Server (10.0.2.4) - Dev Tools + WAC
+│   └── Legacy App (10.0.2.5) - IIS + Classic ASP.NET
+└── Client Subnet (10.0.3.0/24)
+    ├── Win11 Client (10.0.3.4)
+    └── Win11 Client2 (10.0.3.5)
+```
 
-### Active Directory
-
-- Fully configured AD DS with two domain controllers
-- Demo organizational units, users, and groups
-- Default domain admin account for lab administration
+### Security Features
+- Enterprise PKI with auto-enrollment
+- No public IP addresses
+- Azure Bastion for secure access
+- NSG rules following least privilege
+- Key Vault for credential management
+- SSH key-based authentication
+- Domain-issued TLS certificates
 
 ### Certificate Services
+- Enterprise Root CA on DC1
+- Automatic certificate enrollment
+- Pre-configured templates for:
+  - Web Server certificates
+  - SSH authentication
+  - User authentication
+- Certificate-based SSH authentication
+- Proper TLS for all web services
 
-- AD CS installed on DC1
-- Web Enrollment enabled
-- Certificate templates for common scenarios
+### Legacy App Features
+- Classic ASP.NET Web Forms application
+- Windows Authentication (Kerberos)
+- SQL Server integration
+- Perfect for testing:
+  - Kerberos delegation
+  - Double-hop authentication
+  - Token size issues
+  - Protocol transition
 
-### Additional Components
+## Common Tasks 📋
 
-- Web server (IIS) on the member server
-- SSH enabled on all servers
-- DNS configuration for internal name resolution
+### Connecting to VMs
+```powershell
+# Via Azure Portal
+1. Go to the VM in Azure Portal
+2. Click "Connect" -> "Bastion"
+3. Enter credentials
 
-## Cost Optimization
+# Via PowerShell
+Connect-AzBastionSession -ResourceGroupName "rg-ws2025-lab" -VMName "vm-name"
+```
 
-This lab is designed to minimize Azure costs by:
+### Stopping/Starting the Lab
+```powershell
+# Stop all VMs (PowerShell)
+./scripts/stop-lab.ps1
 
-- Using smalldisk VM images
-- Implementing right-sized VMs (Standard_D2s_v3)
-- No public IPs on VMs (using Bastion for access)
-- Easy deployment and teardown for on-demand usage
+# Start all VMs
+./scripts/start-lab.ps1
+```
 
-## Customization
+### Accessing Windows Admin Center
+1. Navigate to `https://memberserver:443`
+2. Use your domain credentials
 
-You can customize the lab by modifying the Bicep templates and scripts:
+## Learning Resources 📚
 
-- Change VM sizes or OS versions
-- Add additional VMs or services
-- Modify the domain structure
-- Expand the network configuration
+- [Windows Server 2025 Documentation](https://docs.microsoft.com/windows-server)
+- [Azure Virtual Machines Best Practices](https://docs.microsoft.com/azure/virtual-machines)
+- [Active Directory Administration](https://docs.microsoft.com/windows-server/identity/ad-ds/get-started/virtual-dc/active-directory-domain-services-overview)
 
-## Troubleshooting
+## Troubleshooting 🔧
 
-For common issues, see the [Troubleshooting Guide](docs/troubleshooting.md).
+### Common Issues
 
-## Contributing
+1. **Deployment Fails**
+   - Check your subscription quota
+   - Ensure you have contributor access
+   - Verify region availability
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+2. **Can't Connect to VMs**
+   - Wait 30 minutes after deployment (AD setup)
+   - Verify Bastion is deployed
+   - Check NSG rules
 
-## License
+3. **Dev Tools Issues**
+   - Run `choco upgrade all` for updates
+   - Check Windows Admin Center logs
+   - Verify domain connectivity
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Getting Help
+- Open an issue in this repo
+- Check Azure Portal Activity Log
+- Review deployment logs in `C:\Logs`
 
-## Acknowledgments
+## Contributing 🤝
 
-- Microsoft for Windows Server 2025
-- Azure Bicep community for infrastructure as code templates
-- PowerShell community for automation scripts
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## License 📄
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+
+---
+Made with ❤️ for the Windows Server community
