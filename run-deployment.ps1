@@ -30,17 +30,8 @@ function Generate-RandomPassword {
     return $password
 }
 
-# Clean up any existing resource group with the same name (BE CAREFUL WITH THIS!)
-$ResourceGroupName = "rg-ws2025-lab"
-$existingGroup = az group exists --name $ResourceGroupName
-if ($existingGroup -contains "true") {
-    Write-Host "Cleaning up existing resource group: $ResourceGroupName" -ForegroundColor Yellow
-    az group delete --name $ResourceGroupName --yes --no-wait
-    Write-Host "Waiting for resource group deletion to complete..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 120  # Wait for deletion to complete
-}
-
 # Configuration
+$ResourceGroupName = "rg-ws2025-lab"
 $DomainName = "winlab2025"
 $Location = "eastus"
 $AdminUsername = "labadmin"
@@ -66,7 +57,29 @@ $securePassword = ConvertTo-SecureString $AdminPassword -AsPlainText -Force
 $DebugPreference = "Continue"
 $VerbosePreference = "Continue"
 
+# First clean up any existing resource group with the same name (if any)
+$existingRg = az group exists --name $ResourceGroupName
+Write-Host "Checking if resource group exists: $existingRg"
+if ($existingRg -match "true") {
+    Write-Host "Resource group $ResourceGroupName already exists. Deleting..." -ForegroundColor Yellow
+    az group delete --name $ResourceGroupName --yes --no-wait
+    Write-Host "Waiting for resource group deletion to complete..."
+    Start-Sleep -Seconds 60
+}
+
+# Create resource group first
+Write-Host "Creating resource group: $ResourceGroupName"
+az group create --name $ResourceGroupName --location $Location
+
 # Run the deployment with all parameters and force flag
+Write-Host "Starting Bicep deployment with these parameters:" -ForegroundColor Cyan
+Write-Host "ResourceGroupName: $ResourceGroupName"
+Write-Host "DomainName: $DomainName"
+Write-Host "Location: $Location"
+Write-Host "AdminUsername: $AdminUsername"
+Write-Host "Force: true"
+Write-Host "EnableVerbose: true"
+
 & ./deploy.ps1 `
     -ResourceGroupName $ResourceGroupName `
     -DomainName $DomainName `
@@ -77,4 +90,12 @@ $VerbosePreference = "Continue"
     -EnableVerbose
 
 Write-Host ""
-Write-Host "Deployment initiated. Check Azure Portal for progress." 
+Write-Host "Deployment initiated. Check Azure Portal for progress."
+Write-Host "Remember to wait 30-45 minutes for AD setup to complete after deployment."
+
+# Check final deployment status
+Write-Host "Final deployment status:" -ForegroundColor Cyan
+az deployment sub list --query "[?contains(name, 'WinServer2025Lab')].{Name:name, Started:properties.timestamp, State:properties.provisioningState}" --output table
+
+Write-Host "Created resources:" -ForegroundColor Cyan
+az resource list --resource-group $ResourceGroupName --output table 

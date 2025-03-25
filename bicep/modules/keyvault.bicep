@@ -11,11 +11,11 @@ param adminUsername string
 param adminPassword string
 
 // Key Vault configuration
-var keyVaultName = '${prefix}-kv'
+var kvName = '${prefix}-kv-${uniqueString(resourceGroup().id)}'
 
 // Create Key Vault
 resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
-  name: keyVaultName
+  name: kvName
   location: location
   tags: tags
   properties: {
@@ -51,5 +51,5 @@ resource passwordSecret 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
 }
 
 // Outputs
-output keyVaultName string = keyVault.name
+output keyVaultName string = kvName
 output keyVaultId string = keyVault.id 

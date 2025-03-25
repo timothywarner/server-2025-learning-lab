@@ -182,11 +182,8 @@ resource dc1ConfigADDS 'Microsoft.Compute/virtualMachines/extensions@2022-08-01'
     type: 'CustomScriptExtension'
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
-    settings: {
-      fileUris: []
-    }
     protectedSettings: {
-      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "New-Item -Path C:\\Scripts -ItemType Directory -Force; Add-Content -Path C:\\Scripts\\install-addc1.ps1 -Value \\"param ($DomainName, $AdminUser, $AdminPassword) Start-Transcript -Path C:\\Logs\\addc1-setup.log -Append; Write-Output \\"Starting Primary Domain Controller configuration...\\"; Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools; Install-ADDSForest -CreateDnsDelegation:$false -DatabasePath \\"C:\\Windows\\NTDS\\" -DomainMode \\"WinThreshold\\" -DomainName $DomainName -ForestMode \\"WinThreshold\\" -InstallDns:$true -LogPath \\"C:\\Windows\\NTDS\\" -NoRebootOnCompletion:$false -SysvolPath \\"C:\\Windows\\SYSVOL\\" -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString $AdminPassword -AsPlainText -Force); Stop-Transcript\\"; C:\\Scripts\\install-addc1.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword}"'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools; Install-ADDSForest -CreateDnsDelegation:$false -DatabasePath \'C:\\Windows\\NTDS\' -DomainMode \'WinThreshold\' -DomainName \'${domainName}\' -ForestMode \'WinThreshold\' -InstallDns:$true -LogPath \'C:\\Windows\\NTDS\' -NoRebootOnCompletion:$false -SysvolPath \'C:\\Windows\\SYSVOL\' -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString \'${adminPassword}\' -AsPlainText -Force)"'
     }
   }
 }
@@ -205,11 +202,8 @@ resource dc2ConfigADDS 'Microsoft.Compute/virtualMachines/extensions@2022-08-01'
     type: 'CustomScriptExtension'
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
-    settings: {
-      fileUris: []
-    }
     protectedSettings: {
-      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "New-Item -Path C:\\Scripts -ItemType Directory -Force; Add-Content -Path C:\\Scripts\\install-addc2.ps1 -Value \\"param ($DomainName, $AdminUser, $AdminPassword, $PrimaryDC) Start-Transcript -Path C:\\Logs\\addc2-setup.log -Append; Write-Output \\"Starting Secondary Domain Controller configuration...\\"; Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools; $securePassword = ConvertTo-SecureString $AdminPassword -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential(\\\\"$DomainName\\\\$AdminUser\\\\", $securePassword); Install-ADDSDomainController -Credential $credential -DomainName $DomainName -InstallDns:$true -DatabasePath \\"C:\\Windows\\NTDS\\" -LogPath \\"C:\\Windows\\NTDS\\" -SysvolPath \\"C:\\Windows\\SYSVOL\\" -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword $securePassword; Stop-Transcript\\"; C:\\Scripts\\install-addc2.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword} -PrimaryDC ${computerNameDC1}"'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools; $securePassword = ConvertTo-SecureString \'${adminPassword}\' -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential(\'${domainName}\\${adminUsername}\', $securePassword); Install-ADDSDomainController -Credential $credential -DomainName \'${domainName}\' -InstallDns:$true -DatabasePath \'C:\\Windows\\NTDS\' -LogPath \'C:\\Windows\\NTDS\' -SysvolPath \'C:\\Windows\\SYSVOL\' -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword $securePassword"'
     }
   }
 }

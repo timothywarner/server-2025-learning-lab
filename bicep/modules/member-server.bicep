@@ -129,11 +129,8 @@ resource memberServerConfig 'Microsoft.Compute/virtualMachines/extensions@2022-0
     type: 'CustomScriptExtension'
     typeHandlerVersion: '1.10'
     autoUpgradeMinorVersion: true
-    settings: {
-      fileUris: []
-    }
     protectedSettings: {
-      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "New-Item -Path C:\\Scripts -ItemType Directory -Force; Add-Content -Path C:\\Scripts\\setup-member-server.ps1 -Value \\"param ($DomainName, $AdminUser, $AdminPassword) Start-Transcript -Path C:\\Logs\\member-server-setup.log -Append; Write-Output \\"Starting member server configuration...\\"; Start-Sleep -Seconds 60; $securePassword = ConvertTo-SecureString $AdminPassword -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential(\\\\"$DomainName\\\\$AdminUser\\\\", $securePassword); Add-Computer -DomainName $DomainName -Credential $credential -Restart:$false -Force; Install-WindowsFeature -Name RSAT-AD-Tools, RSAT-DNS, Web-Server, Web-Mgmt-Tools; Write-Output \\"Configuration complete! Restart required.\\"; Stop-Transcript; Restart-Computer -Force\\"; C:\\Scripts\\setup-member-server.ps1 -DomainName ${domainName} -AdminUser ${adminUsername} -AdminPassword ${adminPassword}"'
+      commandToExecute: 'powershell -ExecutionPolicy Unrestricted -Command "Start-Sleep -Seconds 60; $securePassword = ConvertTo-SecureString \'${adminPassword}\' -AsPlainText -Force; $credential = New-Object System.Management.Automation.PSCredential(\'${domainName}\\${adminUsername}\', $securePassword); Add-Computer -DomainName \'${domainName}\' -Credential $credential -Restart:$false -Force; Install-WindowsFeature -Name RSAT-AD-Tools, RSAT-DNS, Web-Server, Web-Mgmt-Tools; Restart-Computer -Force"'
     }
   }
 }
